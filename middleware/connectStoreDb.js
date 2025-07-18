@@ -51,15 +51,16 @@ const connectStoreDb = async (req, res, next) => {
 
       // List all available stores for debugging
       const allStores = await StoreConfig.find({}, "storeId storeName").limit(10)
-      console.log(
-        "[Connect Store DB] Available stores:",
-        allStores.map((s) => ({ storeId: s.storeId, storeName: s.storeName })),
-      )
+      console.log("[Connect Store DB] Available stores in database:")
+      allStores.forEach((store) => {
+        console.log(`  - StoreId: ${store.storeId}, StoreName: ${store.storeName}`)
+      })
 
       return res.status(404).json({
         message: "Store not found or invalid storeId.",
         providedStoreId: storeId,
         availableStores: allStores.map((s) => s.storeId),
+        hint: "Make sure you're using the correct storeId from the database",
       })
     }
 
