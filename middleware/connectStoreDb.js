@@ -8,7 +8,10 @@ const connectStoreDb = async (req, res, next) => {
   try {
     const storeId = req.params.storeId?.trim() // Ensure storeId is trimmed
 
+    console.log(`[Connect Store DB] Processing request for storeId: ${storeId}`)
+
     if (!storeId) {
+      console.error("[Connect Store DB] Missing storeId in request params")
       return res.status(400).json({ message: "Missing storeId in request params." })
     }
 
@@ -21,11 +24,8 @@ const connectStoreDb = async (req, res, next) => {
       return res.status(500).json({ message: "Internal Server Error: Main database not connected." })
     }
 
-    // --- New Diagnostic Logs ---
     console.log(`[Connect Store DB] Main DB connected to database: '${mainDb.name}'`)
-    const collections = await mainDb.db.listCollections().toArray()
-    console.log(`[Connect Store DB] Collections in main DB: ${collections.map((c) => c.name).join(", ")}`)
-    // --- End New Diagnostic Logs ---
+    console.log(`[Connect Store DB] Main DB readyState: ${mainDb.readyState}`)
 
     // 2. Look up storeId in the main DB to get tenantId
     const StoreConfig = mainDb.models.StoreConfig || mainDb.model("StoreConfig", StoreConfigSchema, "stores") // Explicitly use "stores" collection
@@ -35,16 +35,39 @@ const connectStoreDb = async (req, res, next) => {
 
     const storeConfig = await StoreConfig.findOne(query)
 
-    console.log("[Connect Store DB] Store config found (from main DB):", storeConfig ? storeConfig.toObject() : "null")
+    console.log(
+      "[Connect Store DB] Store config found:",
+      storeConfig
+        ? {
+            storeId: storeConfig.storeId,
+            tenantId: storeConfig.tenantId,
+            storeName: storeConfig.storeName,
+          }
+        : "null",
+    )
 
     if (!storeConfig) {
       console.error(`[Connect Store DB] Store config not found in main DB for storeId: '${storeId}'`)
-      return res.status(404).json({ message: "Store not found or invalid storeId." })
+
+      // List all available stores for debugging
+      const allStores = await StoreConfig.find({}, "storeId storeName").limit(10)
+      console.log(
+        "[Connect Store DB] Available stores:",
+        allStores.map((s) => ({ storeId: s.storeId, storeName: s.storeName })),
+      )
+
+      return res.status(404).json({
+        message: "Store not found or invalid storeId.",
+        providedStoreId: storeId,
+        availableStores: allStores.map((s) => s.storeId),
+      })
     }
 
     const tenantId = storeConfig.tenantId
     // IMPORTANT CHANGE: Convert tenantId to lowercase for database name consistency
     const tenantDbName = `tenant_${tenantId.toLowerCase()}` // Construct tenant database name
+
+    console.log(`[Connect Store DB] Connecting to tenant database: ${tenantDbName}`)
 
     // 3. Connect to the specific tenant database
     const tenantDb = await connectTenantDB(tenantDbName)
@@ -53,6 +76,8 @@ const connectStoreDb = async (req, res, next) => {
       console.error(`[Connect Store DB] Failed to connect to tenant DB: ${tenantDbName}`)
       return res.status(500).json({ message: "Failed to connect to store's tenant database." })
     }
+
+    console.log(`[Connect Store DB] Tenant DB readyState: ${tenantDb.readyState}`)
 
     req.storeDb = tenantDb // Attach the tenant-specific connection to the request
     req.tenantId = tenantId // Also attach tenantId for controllers that might need it
@@ -63,7 +88,11 @@ const connectStoreDb = async (req, res, next) => {
     next()
   } catch (error) {
     console.error("[Connect Store DB Error]", error)
-    res.status(500).json({ message: "Failed to connect to store DB." })
+    res.status(500).json({
+      message: "Failed to connect to store DB.",
+      error: error.message,
+      stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    })
   }
 }
 
