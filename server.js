@@ -34,6 +34,15 @@ app.use("/store/:storeId", (req, res, next) => {
 // API Routes for storefront (user-facing)
 // All routes are prefixed with /store/:storeId/api/storefront
 app.use("/store/:storeId/api/storefront", connectStoreDb) // Apply the new middleware
+
+// Add debugging middleware
+app.use("/store/:storeId/api/storefront", (req, res, next) => {
+  console.log(`[DEBUG] Storefront API Request: ${req.method} ${req.originalUrl}`)
+  console.log(`[DEBUG] StoreId: ${req.storeId}`)
+  console.log(`[DEBUG] StoreDb connected: ${!!req.storeDb}`)
+  next()
+})
+
 app.use("/store/:storeId/api/storefront", authRoutes)
 app.use("/store/:storeId/api/storefront", productRoutes)
 app.use("/store/:storeId/api/storefront", categoryRoutes)
@@ -85,7 +94,7 @@ app.get("/store/:storeId", (req, res) => {
   })
 })
 
-// API info endpoint for storefront
+// API info endpoint for storefront (move this AFTER the route handlers)
 app.get("/store/:storeId/api/storefront", connectStoreDb, (req, res) => {
   const { storeId } = req.params
   res.json({
