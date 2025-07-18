@@ -11,10 +11,7 @@ const connectMainDB = async () => {
   }
   try {
     console.log("[DB] Attempting to connect to Main Database...")
-    mainDbConnection = await mongoose.createConnection(process.env.MAIN_DB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
+    mainDbConnection = await mongoose.createConnection(process.env.MAIN_DB_URI)
     console.log("[DB] Successfully connected to Main Database.")
     return mainDbConnection
   } catch (error) {
@@ -38,10 +35,7 @@ const connectTenantDB = async (dbName) => {
     console.log(`[DB] Attempting to create new connection for Tenant Database: ${dbName}`)
     // Assuming MONGO_HOST is like "mongodb://localhost:27017/"
     const baseUri = process.env.MONGO_HOST || "mongodb://localhost:27017/"
-    const conn = await mongoose.createConnection(`${baseUri}${dbName}`, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
+    const conn = await mongoose.createConnection(`${baseUri}${dbName}`)
     connections[dbName] = conn
     console.log(`[DB] Successfully connected to Tenant Database: ${dbName}`)
     return conn
