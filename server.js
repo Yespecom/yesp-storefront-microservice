@@ -55,7 +55,73 @@ app.use("/webhooks/:gatewayName/:storeId", webhookRoutes) // Mount webhook route
 
 // Basic health check route
 app.get("/", (req, res) => {
-  res.send("Storefront Microservice is running!")
+  res.json({
+    message: "YESP Storefront Microservice is running!",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// Health check for specific store
+app.get("/store/:storeId", (req, res) => {
+  const { storeId } = req.params
+  res.json({
+    message: `Welcome to YESP Studio API Gateway!`,
+    storeId: storeId,
+    availableEndpoints: [
+      `GET /store/${storeId}/api/storefront/products - List all products`,
+      `GET /store/${storeId}/api/storefront/products/:slug - Get product details`,
+      `GET /store/${storeId}/api/storefront/products/search?q=term - Search products`,
+      `GET /store/${storeId}/api/storefront/categories - List all categories`,
+      `GET /store/${storeId}/api/storefront/offers - List active offers`,
+      `POST /store/${storeId}/api/storefront/register - Register customer`,
+      `POST /store/${storeId}/api/storefront/login - Login customer`,
+      `GET /store/${storeId}/api/storefront/orders - Get customer orders (auth required)`,
+      `POST /store/${storeId}/api/storefront/orders - Place new order (auth required)`,
+      `GET /store/${storeId}/api/storefront/payment-gateways - Get available payment gateways`,
+      `POST /store/${storeId}/api/storefront/payment-intents - Create payment intent (auth required)`,
+    ],
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// API info endpoint for storefront
+app.get("/store/:storeId/api/storefront", connectStoreDb, (req, res) => {
+  const { storeId } = req.params
+  res.json({
+    message: `YESP Studio Storefront API for Store: ${storeId}`,
+    version: "1.0.0",
+    endpoints: {
+      products: {
+        list: `GET /store/${storeId}/api/storefront/products`,
+        details: `GET /store/${storeId}/api/storefront/products/:slug`,
+        search: `GET /store/${storeId}/api/storefront/products/search?q=term`,
+      },
+      categories: {
+        list: `GET /store/${storeId}/api/storefront/categories`,
+      },
+      offers: {
+        list: `GET /store/${storeId}/api/storefront/offers`,
+      },
+      auth: {
+        register: `POST /store/${storeId}/api/storefront/register`,
+        login: `POST /store/${storeId}/api/storefront/login`,
+      },
+      orders: {
+        list: `GET /store/${storeId}/api/storefront/orders (requires auth)`,
+        create: `POST /store/${storeId}/api/storefront/orders (requires auth)`,
+      },
+      payments: {
+        gateways: `GET /store/${storeId}/api/storefront/payment-gateways`,
+        intent: `POST /store/${storeId}/api/storefront/payment-intents (requires auth)`,
+      },
+    },
+    authentication: {
+      note: "Include 'Authorization: Bearer <token>' header for protected routes",
+      loginEndpoint: `POST /store/${storeId}/api/storefront/login`,
+    },
+    timestamp: new Date().toISOString(),
+  })
 })
 
 // Error handling middleware (optional, but good practice)
